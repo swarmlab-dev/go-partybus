@@ -11,8 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"go-partybus/partybus"
-	bus "go-partybus/partybus"
+	"github.com/swarmlab-dev/go-partybus/partybus"
 
 	"github.com/anandvarma/namegen"
 	"github.com/urfave/cli"
@@ -90,9 +89,9 @@ func joinPartyBus() cli.Command {
 }
 
 func aboardThePartyBus(host string, session string, id string) error {
-	out := make(chan bus.PeerMessage)
-	in := make(chan bus.PeerMessage)
-	sig := make(chan bus.StatusMessage)
+	out := make(chan partybus.PeerMessage)
+	in := make(chan partybus.PeerMessage)
+	sig := make(chan partybus.StatusMessage)
 
 	wg.Add(3)
 
@@ -100,7 +99,7 @@ func aboardThePartyBus(host string, session string, id string) error {
 	go listenInputChannel(in)
 	go listenStatusChannel(sig)
 
-	err := bus.ConnectToPartyBus(host, session, id, out, in, sig)
+	err := partybus.ConnectToPartyBus(host, session, id, out, in, sig)
 	if err != nil {
 		return err
 	}
@@ -111,7 +110,7 @@ func aboardThePartyBus(host string, session string, id string) error {
 	return nil
 }
 
-func listenUserInput(id string, out chan bus.PeerMessage) {
+func listenUserInput(id string, out chan partybus.PeerMessage) {
 	defer wg.Done()
 
 	reader := bufio.NewReader(os.Stdin)
@@ -121,11 +120,11 @@ func listenUserInput(id string, out chan bus.PeerMessage) {
 			log.Fatal(err)
 		}
 
-		out <- bus.NewBroadcastMessage(id, []byte(line))
+		out <- partybus.NewBroadcastMessage(id, []byte(line))
 	}
 }
 
-func listenInputChannel(in chan bus.PeerMessage) {
+func listenInputChannel(in chan partybus.PeerMessage) {
 	defer wg.Done()
 
 	for {
@@ -134,7 +133,7 @@ func listenInputChannel(in chan bus.PeerMessage) {
 	}
 }
 
-func listenStatusChannel(in chan bus.StatusMessage) {
+func listenStatusChannel(in chan partybus.StatusMessage) {
 	defer wg.Done()
 
 	for {

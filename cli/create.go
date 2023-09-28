@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"go-partybus/partybus"
 	"io"
 	"log/slog"
 	"net/http"
 	"os"
+
+	"github.com/swarmlab-dev/go-partybus/partybus"
 
 	"github.com/gorilla/mux"
 	"github.com/urfave/cli"

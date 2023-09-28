@@ -1,4 +1,4 @@
-module go-partybus
+module github.com/swarmlab-dev/go-partybus
 
 go 1.21.0
 

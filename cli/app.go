@@ -1,8 +1,9 @@
 package main
 
 import (
-	"go-partybus/partybus"
 	"os"
+
+	"github.com/swarmlab-dev/go-partybus/partybus"
 
 	"github.com/urfave/cli"
 )

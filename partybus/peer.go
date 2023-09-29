@@ -28,17 +28,17 @@ func ConnectToPartyBus(host string, session string, id string, out chan PeerMess
 		for {
 			_, json, err := ws.ReadMessage()
 			if err != nil {
-				Logger().Error("read", "error", err.Error())
+				logger.Errorw("read", "error", err.Error())
 				break
 			}
 
 			msg, err := ParseBusMessage(json)
 			if err != nil {
-				Logger().Error("parse", "error", err.Error())
+				logger.Errorw("parse error:%s", err.Error())
 				break
 			}
 
-			Logger().Debug("recv:", "msg", msg)
+			logger.Debugw("recv", "msg", msg)
 			switch msg.GetType() {
 			case PEER:
 				in <- msg.(PeerMessage)
@@ -57,7 +57,7 @@ func ConnectToPartyBus(host string, session string, id string, out chan PeerMess
 			case msg := <-out:
 				err := ws.WriteJSON(msg)
 				if err != nil {
-					Logger().Error("write:", "error", err)
+					logger.Errorw("write", "error", err)
 					return
 				}
 			}

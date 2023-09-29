@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -13,8 +14,9 @@ import (
 )
 
 type Peer struct {
-	ID   string
-	conn *websocket.Conn
+	ID      string
+	conn    *websocket.Conn
+	wsMutex sync.Mutex
 }
 
 type Session struct {
@@ -40,7 +42,7 @@ func HandleQuery(w http.ResponseWriter, r *http.Request) {
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		fmt.Println(err)
+		logger.Errorw("cannot upgrade query to websocket", "error", err.Error())
 		return
 	}
 
@@ -54,24 +56,24 @@ func (session *Session) handlePeer(peer *Peer) {
 	for {
 		_, json, err := peer.conn.ReadMessage()
 		if err != nil {
-			Logger().Error("read", "error", err.Error())
+			logger.Errorw("read", "error", err.Error())
 			break
 		}
 
 		msg, err := ParseBusMessage(json)
 		if err != nil {
-			Logger().Error("parse", "error", err.Error())
+			logger.Errorw("parse", "error", err.Error())
 			break
 		}
 
 		if err = session.checkFromField(peer, msg); err != nil {
-			Logger().Error("check `from` field", "error", err.Error())
+			logger.Errorw("check `from` field", "error", err.Error())
 			sendCloseMessage(peer.conn, websocket.ClosePolicyViolation)
 			break
 		}
 
 		if err = session.handleMessage(peer, msg); err != nil {
-			Logger().Error("handling message", "error", err.Error())
+			logger.Errorw("handling message", "error", err.Error())
 			break
 		}
 	}
@@ -88,7 +90,7 @@ func (session *Session) handlePeer(peer *Peer) {
 func sendCloseMessage(conn *websocket.Conn, reason int) {
 	err := conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(reason, ""), time.Now().Add(time.Second))
 	if err != nil {
-		Logger().Error("write close message", "error", err)
+		logger.Errorw("write close message", "error", err)
 		return
 	}
 }
@@ -123,7 +125,7 @@ func (session *Session) handleMessage(peer *Peer, msg BusMessage) error {
 	case HELLO:
 		if peer.ID == "" {
 			peer.ID = msg.GetFrom()
-			Logger().Info("peer id registered", "session-id", session.ID, "peer-id", peer.ID)
+			logger.Infow("peer id registered", "session-id", session.ID, "peer-id", peer.ID)
 			status := NewStatusSessionMessage(session.ID, session.getPeerIds())
 			session.broadcast(status)
 		}
@@ -133,9 +135,12 @@ func (session *Session) handleMessage(peer *Peer, msg BusMessage) error {
 		if !ok {
 			return fmt.Errorf("casting of message to PeerMessage failed")
 		}
-		if peerMsg.To == nil {
+
+		if peerMsg.To == nil || len(peerMsg.To) == 0 {
+			logger.Infow("broadcast peermsg", "from", peerMsg.From, "size", len(peerMsg.Msg))
 			session.broadcast(msg)
 		} else {
+			logger.Infow("multicast peermsg", "from", peerMsg.From, "to", strings.Join(peerMsg.To, ", "), "size", len(peerMsg.Msg))
 			session.multicast(peerMsg.To, peerMsg)
 		}
 		return nil
@@ -150,7 +155,6 @@ func (session *Session) broadcast(msg BusMessage) {
 		if peer.ID == msg.GetFrom() {
 			continue
 		}
-
 		session.sendToPeer(peer, msg)
 	}
 }
@@ -164,9 +168,12 @@ func (session *Session) multicast(to []string, msg BusMessage) {
 }
 
 func (session *Session) sendToPeer(peer *Peer, msg BusMessage) {
+	peer.wsMutex.Lock()
+	defer peer.wsMutex.Unlock()
+
 	err := peer.conn.WriteJSON(msg)
 	if err != nil {
-		logger.Error("sendToPeer", "error", err.Error())
+		logger.Errorw("sendToPeer", "error", err.Error())
 	}
 }
 
@@ -182,7 +189,7 @@ func createSession(sessionID string) *Session {
 	}
 	sessions[sessionID] = session
 
-	Logger().Info("session created", "session-id", sessionID)
+	logger.Infow("session created", "session-id", sessionID)
 	return session
 }
 
@@ -191,7 +198,7 @@ func deleteSession(sessionID string) {
 	defer sessionMutex.Unlock()
 
 	delete(sessions, sessionID)
-	Logger().Info("session deleted", "session-id", sessionID)
+	logger.Infow("session deleted", "session-id", sessionID)
 }
 
 func (session *Session) addPeer(conn *websocket.Conn) *Peer {
@@ -202,7 +209,7 @@ func (session *Session) addPeer(conn *websocket.Conn) *Peer {
 		conn: conn,
 	}
 	session.Peers[peer] = true
-	Logger().Info("peer added", "session-id", session.ID)
+	logger.Infow("peer added", "session-id", session.ID)
 
 	return peer
 }
@@ -226,5 +233,5 @@ func (session *Session) deletePeer(peer *Peer) {
 	defer sessionMutex.Unlock()
 
 	delete(session.Peers, peer)
-	Logger().Info("peer removed", "session-id", session.ID, "peer-id", peer.ID)
+	logger.Infow("peer removed", "session-id", session.ID, "peer-id", peer.ID)
 }

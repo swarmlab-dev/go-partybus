@@ -3,8 +3,6 @@ package main
 import (
 	"os"
 
-	"github.com/swarmlab-dev/go-partybus/partybus"
-
 	"github.com/urfave/cli"
 )
 
@@ -21,6 +19,6 @@ func main() {
 
 	err := app.Run(os.Args)
 	if err != nil {
-		partybus.Logger().Error("run", "error", err)
+		logger.Error("run", "error", err)
 	}
 }

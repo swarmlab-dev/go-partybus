@@ -68,6 +68,10 @@ func (m PeerMessage) GetFrom() string {
 	return m.From
 }
 
+func (m PeerMessage) IsBroadcast() bool {
+	return (m.To == nil || len(m.To) == 0)
+}
+
 // factories
 
 func NewBroadcastMessage(from string, msg []byte) PeerMessage {
@@ -139,6 +143,6 @@ func ParseBusMessage(jsonData []byte) (BusMessage, error) {
 		}
 		return peerMessage, nil
 	default:
-		return nil, fmt.Errorf("type %i is unknown", msgType)
+		return nil, fmt.Errorf("type %v is unknown", msgType)
 	}
 }

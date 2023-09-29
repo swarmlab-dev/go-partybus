@@ -1,19 +1,7 @@
 package partybus
 
 import (
-	"io"
-	"log/slog"
+	"github.com/ipfs/go-log"
 )
 
-var logger *slog.Logger
-
-func SetLogger(log *slog.Logger) {
-	logger = log
-}
-
-func Logger() *slog.Logger {
-	if logger == nil {
-		logger = slog.New(slog.NewJSONHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	}
-	return logger
-}
+var logger = log.Logger("partybus")

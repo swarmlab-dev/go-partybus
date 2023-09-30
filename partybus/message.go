@@ -10,10 +10,10 @@ import (
 type BusMessageType = int
 
 const (
-	PEER   BusMessageType = 0
 	HELLO  BusMessageType = 1
 	LEAVE  BusMessageType = 2
 	STATUS BusMessageType = 3
+	PEER   BusMessageType = 4
 )
 
 type BaseMessage struct {

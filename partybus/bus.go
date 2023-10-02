@@ -55,25 +55,26 @@ func (session *Session) handlePeer(peer *Peer) {
 
 	for {
 		_, json, err := peer.conn.ReadMessage()
+
 		if err != nil {
-			logger.Errorw("read", "error", err.Error())
+			logger.Errorw("read", "error", err.Error(), "peer", peer.ID)
 			break
 		}
 
 		msg, err := ParseBusMessage(json)
 		if err != nil {
-			logger.Errorw("parse", "error", err.Error())
+			logger.Errorw("parse", "error", err.Error(), "peer", peer.ID)
 			break
 		}
 
 		if err = session.checkFromField(peer, msg); err != nil {
-			logger.Errorw("check `from` field", "error", err.Error())
+			logger.Errorw("check `from` field", "error", err.Error(), "peer", peer.ID)
 			sendCloseMessage(peer.conn, websocket.ClosePolicyViolation)
 			break
 		}
 
 		if err = session.handleMessage(peer, msg); err != nil {
-			logger.Errorw("handling message", "error", err.Error())
+			logger.Errorw("handling message", "error", err.Error(), "peer", peer.ID)
 			break
 		}
 	}

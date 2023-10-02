@@ -6,23 +6,27 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func ConnectToPartyBus(host string, session string, id string, out chan PeerMessage, in chan PeerMessage, sig chan StatusMessage) error {
+func ConnectToPartyBus(host string, session string, id string, out chan PeerMessage) (chan PeerMessage, chan StatusMessage, error) {
 	u := url.URL{Scheme: "ws", Host: host, Path: session}
 	ws, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	// say hello
 	err = ws.WriteJSON(NewHelloMessage(id))
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	// routing received from the socket down to the `in` channel (PeerMessage) and `sig` channel (StatusMessage)
 	done := make(chan struct{})
+	in := make(chan PeerMessage)
+	sig := make(chan StatusMessage)
 	go func() {
 		defer close(done)
+		defer close(in)
+		defer close(sig)
 		defer ws.Close()
 
 		for {
@@ -64,5 +68,5 @@ func ConnectToPartyBus(host string, session string, id string, out chan PeerMess
 		}
 	}()
 
-	return nil
+	return in, sig, nil
 }

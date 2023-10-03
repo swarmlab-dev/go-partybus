@@ -60,21 +60,17 @@ func joinPartyBus() cli.Command {
 
 func aboardThePartyBus(host string, session string, id string) error {
 	out := make(chan partybus.PeerMessage)
-	in := make(chan partybus.PeerMessage)
-	sig := make(chan partybus.StatusMessage)
 
 	wg.Add(3)
-
 	go listenUserInput(id, out)
-	go listenInputChannel(in)
-	go listenStatusChannel(sig)
-
-	err := partybus.ConnectToPartyBus(host, session, id, out, in, sig)
+	in, sig, err := partybus.ConnectToPartyBus(host, session, id, out)
 	if err != nil {
 		return err
 	}
-
 	fmt.Fprintf(os.Stderr, "connected to session=%s with id=%s\n", session, id)
+
+	go listenInputChannel(in)
+	go listenStatusChannel(sig)
 
 	wg.Wait()
 	return nil
